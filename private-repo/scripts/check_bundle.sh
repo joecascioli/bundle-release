@@ -22,7 +22,7 @@ fi
 forbidden_patterns=(
   "\.env$"
   "\.env\."
-  "^secrets\."
+  "(^|/)secrets\."
   "\.pem$"
   "\.key$"
 )

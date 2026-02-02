@@ -63,16 +63,16 @@ jobs:
           entry = {
               "tag": tag,
               "timestamp": manifest.get("timestamp"),
-              "zip": f"/releases/{tag}/bundle.zip",
-              "json": f"/releases/{tag}/bundle.json",
+              "zip": f"releases/{tag}/bundle.zip",
+              "json": f"releases/{tag}/bundle.json",
           }
 
           items.append(entry)
           releases["latest"] = {
               "tag": tag,
               "timestamp": manifest.get("timestamp"),
-              "zip": "/releases/latest.zip",
-              "json": "/releases/latest.json",
+              "zip": "releases/latest.zip",
+              "json": "releases/latest.json",
           }
 
           hub_index.write_text(json.dumps(data, indent=2))

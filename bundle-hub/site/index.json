@@ -2,22 +2,22 @@
   "live": {
     "sha": "0000000000000000000000000000000000000000",
     "timestamp": "1970-01-01T00:00:00Z",
-    "zip": "/live/latest.zip",
-    "json": "/live/latest.json"
+    "zip": "live/latest.zip",
+    "json": "live/latest.json"
   },
   "releases": {
     "latest": {
       "tag": "v0.0.0",
       "timestamp": "1970-01-01T00:00:00Z",
-      "zip": "/releases/latest.zip",
-      "json": "/releases/latest.json"
+      "zip": "releases/latest.zip",
+      "json": "releases/latest.json"
     },
     "items": [
       {
         "tag": "v0.0.0",
         "timestamp": "1970-01-01T00:00:00Z",
-        "zip": "/releases/v0.0.0/bundle.zip",
-        "json": "/releases/v0.0.0/bundle.json"
+        "zip": "releases/v0.0.0/bundle.zip",
+        "json": "releases/v0.0.0/bundle.json"
       }
     ]
   }

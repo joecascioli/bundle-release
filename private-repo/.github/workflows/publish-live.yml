@@ -55,8 +55,8 @@ jobs:
               {
                   "sha": manifest.get("sha"),
                   "timestamp": manifest.get("timestamp"),
-                  "zip": "/live/latest.zip",
-                  "json": "/live/latest.json",
+                  "zip": "live/latest.zip",
+                  "json": "live/latest.json",
               }
           )
           hub_index.write_text(json.dumps(data, indent=2))
