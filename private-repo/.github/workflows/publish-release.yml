@@ -1,0 +1,92 @@
+name: Publish Release Bundle
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Build release bundle
+        run: private-repo/scripts/build_bundle.sh dist/release bundle
+
+      - name: Validate bundle
+        run: private-repo/scripts/check_bundle.sh dist/release/bundle.zip dist/release/bundle.json
+
+      - name: Resolve hub repo
+        run: |
+          if [ -z "${BUNDLE_HUB_REPO:-}" ]; then
+            echo "BUNDLE_HUB_REPO=${GITHUB_REPOSITORY_OWNER}/bundle-hub" >> "$GITHUB_ENV"
+          fi
+        env:
+          BUNDLE_HUB_REPO: ${{ secrets.BUNDLE_HUB_REPO }}
+
+      - name: Checkout bundle hub
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.BUNDLE_HUB_REPO }}
+          path: bundle-hub
+          token: ${{ secrets.BUNDLE_HUB_TOKEN || github.token }}
+
+      - name: Update hub artifacts
+        run: |
+          mkdir -p "bundle-hub/site/releases/${RELEASE_TAG}"
+          cp dist/release/bundle.zip "bundle-hub/site/releases/${RELEASE_TAG}/bundle.zip"
+          cp dist/release/bundle.json "bundle-hub/site/releases/${RELEASE_TAG}/bundle.json"
+          cp dist/release/bundle.zip "bundle-hub/site/releases/latest.zip"
+          cp dist/release/bundle.json "bundle-hub/site/releases/latest.json"
+
+      - name: Update hub index.json
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import os
+
+          tag = os.environ["RELEASE_TAG"]
+          hub_index = Path("bundle-hub/site/index.json")
+          manifest = json.loads(Path("dist/release/bundle.json").read_text())
+
+          data = json.loads(hub_index.read_text()) if hub_index.exists() else {}
+          releases = data.setdefault("releases", {})
+          items = releases.setdefault("items", [])
+
+          entry = {
+              "tag": tag,
+              "timestamp": manifest.get("timestamp"),
+              "zip": f"/releases/{tag}/bundle.zip",
+              "json": f"/releases/{tag}/bundle.json",
+          }
+
+          items.append(entry)
+          releases["latest"] = {
+              "tag": tag,
+              "timestamp": manifest.get("timestamp"),
+              "zip": "/releases/latest.zip",
+              "json": "/releases/latest.json",
+          }
+
+          hub_index.write_text(json.dumps(data, indent=2))
+          PY
+
+      - name: Commit and push
+        run: |
+          cd bundle-hub
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add site/releases site/index.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Publish ${RELEASE_TAG} bundle"
+          git push
