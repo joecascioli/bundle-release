@@ -1,0 +1,76 @@
+name: Publish Live Bundle
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Build live bundle
+        run: private-repo/scripts/build_bundle.sh dist/live latest
+
+      - name: Validate bundle
+        run: private-repo/scripts/check_bundle.sh dist/live/latest.zip dist/live/latest.json
+
+      - name: Resolve hub repo
+        run: |
+          if [ -z "${BUNDLE_HUB_REPO:-}" ]; then
+            echo "BUNDLE_HUB_REPO=${GITHUB_REPOSITORY_OWNER}/bundle-hub" >> "$GITHUB_ENV"
+          fi
+        env:
+          BUNDLE_HUB_REPO: ${{ secrets.BUNDLE_HUB_REPO }}
+
+      - name: Checkout bundle hub
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.BUNDLE_HUB_REPO }}
+          path: bundle-hub
+          token: ${{ secrets.BUNDLE_HUB_TOKEN || github.token }}
+
+      - name: Update hub artifacts
+        run: |
+          mkdir -p bundle-hub/site/live
+          cp dist/live/latest.zip bundle-hub/site/live/latest.zip
+          cp dist/live/latest.json bundle-hub/site/live/latest.json
+
+      - name: Update hub index.json
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          hub_index = Path("bundle-hub/site/index.json")
+          manifest = json.loads(Path("dist/live/latest.json").read_text())
+
+          data = json.loads(hub_index.read_text()) if hub_index.exists() else {}
+          data.setdefault("live", {})
+          data["live"].update(
+              {
+                  "sha": manifest.get("sha"),
+                  "timestamp": manifest.get("timestamp"),
+                  "zip": "live/latest.zip",
+                  "json": "live/latest.json",
+              }
+          )
+          hub_index.write_text(json.dumps(data, indent=2))
+          PY
+
+      - name: Commit and push
+        run: |
+          cd bundle-hub
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add site/live/latest.zip site/live/latest.json site/index.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Publish live bundle"
+          git push
