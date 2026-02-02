@@ -1,14 +1,184 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bundle Hub</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: "Inter", "Segoe UI", sans-serif;
+      }
+      body {
+        margin: 0;
+        background: #0c111b;
+        color: #f8fafc;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+      header {
+        margin-bottom: 32px;
+      }
+      h1 {
+        font-size: 2.5rem;
+        margin: 0 0 12px;
+      }
+      p {
+        margin: 0;
+        color: #cbd5f5;
+      }
+      section {
+        background: #111827;
+        border: 1px solid #1f2937;
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 24px;
+      }
+      h2 {
+        margin-top: 0;
+        font-size: 1.5rem;
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #1f2937;
+      }
+      li:last-child {
+        border-bottom: none;
+      }
+      .meta {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .tag {
+        font-weight: 600;
+      }
+      .timestamp {
+        font-size: 0.875rem;
+        color: #94a3b8;
+      }
+      a {
+        color: #38bdf8;
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #1e293b;
+        border-radius: 999px;
+        padding: 4px 12px;
+        font-size: 0.875rem;
+        color: #e2e8f0;
+      }
+      .badge span {
+        color: #7dd3fc;
+      }
+    </style>
   </head>
   <body>
     <main>
-      <h1>Bundle Hub</h1>
-      <p>Placeholder for CODX-PAGES-001.</p>
+      <header>
+        <h1>Bundle Hub</h1>
+        <p>Latest live bundle and release builds served via GitHub Pages.</p>
+      </header>
+
+      <section>
+        <h2>Latest Live Bundle</h2>
+        <div class="meta" id="live-section">
+          <span class="tag">Loading...</span>
+        </div>
+      </section>
+
+      <section>
+        <h2>Latest Release</h2>
+        <div class="meta" id="release-section">
+          <span class="tag">Loading...</span>
+        </div>
+      </section>
+
+      <section>
+        <h2>Release History</h2>
+        <ul id="release-list"></ul>
+      </section>
     </main>
+
+    <script>
+      const formatTimestamp = (value) => {
+        if (!value) return "Unknown";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return date.toLocaleString();
+      };
+
+      const renderLive = (live) => {
+        const container = document.querySelector("#live-section");
+        container.innerHTML = `
+          <span class="tag">${live.sha ?? "unknown"}</span>
+          <span class="timestamp">${formatTimestamp(live.timestamp)}</span>
+          <span class="badge">ZIP: <a href="${live.zip}">latest.zip</a></span>
+          <span class="badge">JSON: <a href="${live.json}">latest.json</a></span>
+        `;
+      };
+
+      const renderLatestRelease = (latest) => {
+        const container = document.querySelector("#release-section");
+        container.innerHTML = `
+          <span class="tag">${latest.tag ?? "unknown"}</span>
+          <span class="timestamp">${formatTimestamp(latest.timestamp)}</span>
+          <span class="badge">ZIP: <a href="${latest.zip}">latest.zip</a></span>
+          <span class="badge">JSON: <a href="${latest.json}">latest.json</a></span>
+        `;
+      };
+
+      const renderReleaseList = (items) => {
+        const list = document.querySelector("#release-list");
+        list.innerHTML = "";
+        if (!items?.length) {
+          list.innerHTML = "<li>No releases published yet.</li>";
+          return;
+        }
+        items.forEach((release) => {
+          const item = document.createElement("li");
+          item.innerHTML = `
+            <div class="meta">
+              <span class="tag">${release.tag}</span>
+              <span class="timestamp">${formatTimestamp(release.timestamp)}</span>
+            </div>
+            <div class="meta">
+              <a href="${release.zip}">bundle.zip</a>
+              <a href="${release.json}">bundle.json</a>
+            </div>
+          `;
+          list.appendChild(item);
+        });
+      };
+
+      fetch("/index.json")
+        .then((response) => response.json())
+        .then((data) => {
+          renderLive(data.live ?? {});
+          renderLatestRelease(data.releases?.latest ?? {});
+          renderReleaseList(data.releases?.items ?? []);
+        })
+        .catch(() => {
+          document.querySelector("#live-section").textContent =
+            "Failed to load index.json.";
+        });
+    </script>
   </body>
 </html>
